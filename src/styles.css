@@ -315,6 +315,15 @@ a.contact__v:hover::after{right:0}
   pointer-events:none;
 }
 .hud>*{pointer-events:auto}
+/* the readout belongs to the recording, so it waits for the timeline: the
+   intro stays clear for the pitch, the numbers, and the contact line.
+   It is measuring from load either way. */
+.hud{transition:opacity .6s var(--ease),transform .6s var(--ease),visibility 0s linear 0s}
+body.at-intro .hud{
+  opacity:0;transform:translateY(8px);visibility:hidden;
+  transition:opacity .4s var(--ease),transform .4s var(--ease),visibility 0s linear .4s;
+}
+html.static body.at-intro .hud{opacity:1;transform:none;visibility:visible}
 html.static #btn-look{display:none}
 
 .tel{

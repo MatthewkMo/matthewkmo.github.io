@@ -149,7 +149,10 @@ async function boot() {
   /* damped scroll — scene state never binds to raw scroll position */
   let damped = 0;
   let targetY = 0;
+  const introGate = (y: number) => document.body.classList.toggle('at-intro', y < window.innerHeight * 0.3);
+  introGate(0);
   lenis.on('scroll', ({ targetScroll }: any) => {
+    introGate(targetScroll);
     // any real scroll re-captures the camera, exactly as the label promises
     if (Math.abs(targetScroll - targetY) > 4) setLook(false);
     targetY = targetScroll;
