@@ -1,0 +1,5 @@
+node_modules/
+dist/
+# never deployed: the original résumé carries details that can't be public
+private/
+.claude/
