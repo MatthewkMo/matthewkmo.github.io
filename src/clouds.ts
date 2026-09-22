@@ -71,9 +71,9 @@ function bbox(c: Ctx, cx: number, cy: number, cz: number, w: number, h: number, 
   }
 }
 
-/* ── EPISODE 01 · Mo Luxury Goods — a lattice of stacked crates ───────── */
+/* ── Mo Luxury Goods — a lattice of stacked crates ───────────────────── */
 function crates(count: number): Volume {
-  return build('ep01', 1042, count, 9, (c) => {
+  return build('crates', 1042, count, 9, (c) => {
     const stacks = 14;
     const boxes: [number, number, number, number][] = [];
     for (let s = 0; s < stacks; s++) {
@@ -98,9 +98,9 @@ function crates(count: number): Volume {
   });
 }
 
-/* ── EPISODE 02 · Community Butler — lawn plane with rooftops ─────────── */
+/* ── Community Butler — lawn plane with rooftops ────────────────────── */
 function lawn(count: number): Volume {
-  return build('ep02', 2277, count, 11, (c) => {
+  return build('lawn', 2277, count, 11, (c) => {
     const ground = Math.floor(count * 0.34);
     for (let p = 0; p < ground; p++) {
       const x = (c.rand() - 0.5) * 24, z = (c.rand() - 0.5) * 24;
@@ -138,9 +138,9 @@ function lawn(count: number): Volume {
   });
 }
 
-/* ── EPISODE 03 · Simplify Tech — a room of desks, scanned in rows ────── */
+/* ── Simplify Tech — a room of desks, scanned in rows ───────────────── */
 function classroom(count: number): Volume {
-  return build('ep03', 3388, count, 10, (c) => {
+  return build('classroom', 3388, count, 10, (c) => {
     const cols = 6, rows = 5;
     const per = Math.floor((count * 0.82) / (cols * rows));
     for (let r = 0; r < rows; r++) {
@@ -166,9 +166,9 @@ function classroom(count: number): Volume {
   });
 }
 
-/* ── EPISODE 04 · Trace AI Labs — egocentric: a figure and two hands ──── */
+/* ── Trace AI Labs — egocentric: a figure and two hands ─────────────── */
 function figure(count: number): Volume {
-  return build('ep04', 4416, count, 8, (c) => {
+  return build('figure', 4416, count, 8, (c) => {
     const n = count;
     const torso = Math.floor(n * 0.3), head = Math.floor(n * 0.12), hands = Math.floor(n * 0.34);
     // torso: capsule shell
@@ -274,10 +274,11 @@ export function buildVolumes(budget: number): Volume[] {
   const b = (f: number) => Math.max(600, Math.floor(budget * f));
   return [
     field(b(0.15)),
-    crates(b(0.12)),
-    lawn(b(0.14)),
-    classroom(b(0.14)),
-    figure(b(0.14)),
+    // résumé order, newest first — the camera visits these in page order
+    figure(b(0.14)),      // EP 01 · Trace AI Labs
+    classroom(b(0.14)),   // EP 02 · Simplify Tech
+    lawn(b(0.14)),        // EP 03 · Community Butler
+    crates(b(0.12)),      // EP 04 · Mo Luxury Goods
     checklist(b(0.11)),
     slab(b(0.22)),
   ];

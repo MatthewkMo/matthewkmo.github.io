@@ -119,10 +119,10 @@ export class CaptureScene {
     // down at a lawn, level with a person, straight on at the closing slab
     const FRAME: { eye: [number, number, number]; look: [number, number, number] }[] = [
       { eye: [0, 1.2, 17.5], look: [0, 0.4, 0] },      // boot noise
-      { eye: [5.5, 3.0, 16.0], look: [0, -0.6, 0] },   // 01 crates
-      { eye: [5.0, 5.2, 15.0], look: [0, -2.6, 0] },   // 02 lawn
-      { eye: [-5.5, 5.0, 15.5], look: [0, -2.0, 0] },  // 03 classroom
-      { eye: [4.5, 1.6, 12.5], look: [0, 0.1, 1.0] },  // 04 figure
+      { eye: [4.5, 1.6, 12.5], look: [0, 0.1, 1.0] },  // 01 figure    · Trace AI Labs
+      { eye: [-5.5, 5.0, 15.5], look: [0, -2.0, 0] },  // 02 classroom · Simplify Tech
+      { eye: [5.0, 5.2, 15.0], look: [0, -2.6, 0] },   // 03 lawn      · Community Butler
+      { eye: [5.5, 3.0, 16.0], look: [0, -0.6, 0] },   // 04 crates    · Mo Luxury Goods
       { eye: [1.5, 0.6, 18.0], look: [0, 0, 0] },      // 05 annotation pass
       { eye: [0, 0.2, 17.0], look: [0, -0.5, 0] },     // contact slab
     ];
