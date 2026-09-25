@@ -20,35 +20,29 @@ npm run typecheck
 | File | Role |
 | --- | --- |
 | `index.html` | All content as real DOM text. This file *is* the fallback document. |
-| `src/styles.css` | Tokens, type scale, stages, HUD, static/reduced-motion document. |
-| `src/main.ts` | Mode detection, scroll rail, free look, keyboard, boot sequence. |
-| `src/scene.ts` | Three.js renderer, camera anchors, GLSL point material. |
-| `src/clouds.ts` | Procedural volumes, one scanned scene per episode. |
-| `src/rng.ts` | Seeded PRNG + value noise. The whole world is generated from these. |
-| `src/resolve.ts` | The signature effect: headings resolving out of noise. |
+| `src/styles.css` | Tokens, type scale, segments, HUD, static/reduced-motion document. |
+| `src/main.ts` | Mode detection, segment tracking, keyboard, boot sequence. |
+| `src/metal.ts` | The liquid metal surface: one fullscreen WebGL pass, no library. |
+| `src/shapes.ts` | The object each segment's metal flows into. |
+| `src/resolve.ts` | The name resolving out of noise. |
 | `src/telemetry.ts` | Measured session values. No storage, no network. |
 
 ## Decisions worth knowing
 
-- **Three and Lenis load only when the flythrough will actually run.** Reduced
-  motion, no WebGL, or `?doc` gets the static document at ~11KB gzipped; the full
-  session is ~145KB gzipped, well under the 500KB budget. No point data ships , 
-  every volume is generated at load from a seed.
-- **Point count** is 46,000 on desktop, 16,000 on mobile (`max-width: 700px` or
-  4 or fewer logical cores), with `devicePixelRatio` capped at 2 / 1.5. Size
-  attenuation and the depth colour ramp are in the shaders, not on the CPU.
-  The render loop stops when the tab is hidden and the ambient layer mutes.
-- **`?doc`** forces the static document, the same thing a locked-down machine or
-  a reduced-motion visitor sees. Useful for checking that fallback directly.
-- **Green (`--annotation`) only marks things the system has annotated**: outcome
-  metrics, bounding boxes around each volume, active state. **Orange (`--flag`)
-  appears exactly twice**, both on Episode 04's quality-flag work.
-- **The closing slab is a liquid surface.** Three slow crossing waves displace it,
-  and the sheen comes from the slope of the height field, so crests catch the light.
-  It runs inside the existing point shader, in the existing greys: no second engine,
-  no extra dependency. Written from scratch rather than adapted from Paper Design's
-  liquid-logo, which is under a PolyForm Shield licence and would have put a
-  non-open-source notice in this repo.
-- **Camera** never binds to raw scroll. Lenis smooths the page; the scene follows
-  a separately damped value (lerp 0.08) along six anchors measured from the real
-  DOM, so the rail survives any layout change.
+- **No dependencies and no framework.** The whole site is about 15KB gzipped,
+  including the metal. It previously carried Three.js for a point cloud; when the
+  cloud went, so did the library, because a fullscreen shader needs no scene graph.
+- **The metal is a real surface, not shaded points.** Six blobs define a field and
+  the metal is whatever that field encloses. The normal comes from the field's
+  slope, and the colour is a procedural room read through the reflected direction,
+  which is what makes chrome read as chrome rather than as grey plastic.
+- **The liquid wobble is sampled inside the field, not added to it.** Added from
+  outside it cancels out of the gradient, and the surface renders flat, lit only
+  at its rim. That bug cost a round; the comment in `metal.ts` says so.
+- **Each segment owns a shape** in `shapes.ts`, and the blobs lerp toward the
+  incoming set, so the metal runs out of one object and into the next instead of
+  cutting between them.
+- **Nothing is driven by scroll position.** Copy does not reveal on scroll, and
+  the metal only changes target when a new segment takes the viewport.
+- **Reduced motion, no WebGL, or `?doc`** gets the static document, which is the
+  same content set as a plain vertical page.
