@@ -77,17 +77,21 @@ const VERT = /* glsl */`
         n = normalize(vec3(-dhx, 1.5, -dhz));
       }
 
-      vec3 key = normalize(vec3(0.34, 0.62, 0.71));
-      vec3 rim = normalize(vec3(-0.66, -0.28, 0.70));
+      // the light rocks across the front of the surface rather than orbiting
+      // behind it, so the highlight sweeps but the surface is never unlit
+      float ang = sin(uTime * 0.30) * 0.95;
+      vec3 key = normalize(vec3(sin(ang) * 0.85, 0.40, 0.78));
+      vec3 rim = normalize(vec3(-sin(ang) * 0.75, -0.35, 0.62));
       float lambert = max(dot(n, key), 0.0);
       // metal is contrast: bright crests, troughs far darker than the field
-      vSheen = (pow(lambert, 5.0) + pow(max(dot(n, rim), 0.0), 26.0) * 0.85) * r;
+      // broad sheen plus a tight travelling glint
+      vSheen = (pow(lambert, 4.0) * 0.55 + pow(lambert, 14.0) * 1.5
+                + pow(max(dot(n, rim), 0.0), 22.0) * 0.9) * r;
       vSheen *= mix(0.55, 1.0, uAmp);
-      // a flat surface can fall almost black, a body has to keep its silhouette,
-      // and the quieter scenes only take as much contrast as they can carry
-      float floorV = uLiquid < 1.5 ? 0.18 : 0.34;
+      // the body sits dark so the crest has somewhere to be bright from
+      float floorV = uLiquid < 1.5 ? 0.26 : 0.32;
       floorV = mix(1.0, floorV, uAmp);
-      vShade = mix(1.0, mix(floorV, 1.15, lambert), r);
+      vShade = mix(1.0, mix(floorV, 1.0, lambert), r);
     }
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
@@ -100,7 +104,7 @@ const VERT = /* glsl */`
     gl_Position = projectionMatrix * mv;
     // size attenuation in the shader, as the sensor would report it
     gl_PointSize = uSize * aSize * uPR * (30.0 / max(dist, 1.0));
-    gl_PointSize *= 1.0 + min(vSheen, 1.0) * 0.7;
+    gl_PointSize *= 1.0 + min(vSheen, 2.0) * 1.3;   // crests overlap and bloom
     gl_PointSize = clamp(gl_PointSize, 0.6, 9.0);
   }
 `;
@@ -118,6 +122,7 @@ const FRAG = /* glsl */`
   varying float vSeed;
   varying float vSheen;
   varying float vShade;
+  uniform float uLiquid;
 
   void main() {
     // round, soft-edged return
@@ -131,12 +136,14 @@ const FRAG = /* glsl */`
     col = mix(col, uFar, smoothstep(0.4, 1.0, vDepth));
     col = mix(col, uAnn, vAnn);
 
+    float sh = min(vSheen, 2.0) * (1.0 - vAnn);
     col *= mix(vShade, 1.0, vAnn);
-    col = mix(col, vec3(0.98, 0.99, 1.0), min(vSheen, 1.0) * 0.92 * (1.0 - vAnn));
+    col = mix(col, vec3(1.0), clamp(sh, 0.0, 1.0));
 
     float a = mask * uOpacity * mix(1.0, 0.34, vDepth);
-    a *= mix(0.62, 1.0, vSeed);
-    a *= 1.0 + min(vSheen, 1.0) * 1.1;
+    // a metal surface is even; only the loose field keeps its per-point dither
+    a *= mix(mix(0.62, 1.0, vSeed), 1.0, step(0.5, uLiquid) * 0.75);
+    a *= 1.0 + sh * 2.2;
     if (a < 0.008) discard;
     gl_FragColor = vec4(col, a);
   }
@@ -335,6 +342,22 @@ export class CaptureScene {
     }
 
     this.renderer.render(this.scene, this.camera);
+
+    if (import.meta.env.DEV && (window as any).__wantPx) {
+      const gl = this.renderer.getContext();
+      const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
+      const probe = (fx: number, fy: number) => {
+        const n = 16, buf = new Uint8Array(n * n * 4);
+        gl.readPixels(Math.floor(W * fx), Math.floor(H * fy), n, n, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+        let max = 0, sum = 0;
+        for (let i = 0; i < buf.length; i += 4) {
+          const v = Math.max(buf[i], buf[i + 1], buf[i + 2]);
+          max = Math.max(max, v); sum += v;
+        }
+        return { max, avg: +(sum / (n * n)).toFixed(1) };
+      };
+      (window as any).__px = { left: probe(0.25, 0.5), mid: probe(0.5, 0.5), right: probe(0.75, 0.5) };
+    }
   }
 
   /** dev-only: what each volume is doing right now */

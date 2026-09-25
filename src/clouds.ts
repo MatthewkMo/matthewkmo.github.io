@@ -241,7 +241,7 @@ function checklist(count: number): Volume {
 function slab(count: number): Volume {
   return build('contact', 5510, count, 12, (c) => {
     const w = 16.5, h = 9;
-    const cols = 132, rows = 72;
+    const cols = 152, rows = 84;
     // a regular lattice, not a scatter: the one surface in the session that the
     // sensor returns completely
     for (let gy = 0; gy < rows; gy++) {
@@ -273,13 +273,13 @@ function field(count: number): Volume {
 export function buildVolumes(budget: number): Volume[] {
   const b = (f: number) => Math.max(600, Math.floor(budget * f));
   return [
-    field(b(0.15)),
+    field(b(0.12)),
     // résumé order, newest first: the camera visits these in page order
     figure(b(0.14)),      // EP 01 · Trace AI Labs
     classroom(b(0.14)),   // EP 02 · Simplify Tech
-    lawn(b(0.14)),        // EP 03 · Community Butler
+    lawn(b(0.12)),        // EP 03 · Community Butler
     crates(b(0.12)),      // EP 04 · Mo Luxury Goods
     checklist(b(0.11)),
-    slab(b(0.22)),
+    slab(b(0.28)),
   ];
 }
