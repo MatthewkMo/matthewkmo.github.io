@@ -19,7 +19,7 @@ const forced = new URLSearchParams(location.search).has('doc');
 const STATIC = forced || reduced || !webglOK();
 
 /* ── fade-in staging for body copy ─────────────────────────────────────── */
-const FADE_SEL = '.lede,.pitch,.proof__cell,.tags--intro,.meta,.reach,.ep__tc,.ep__role,.tags,.ep__notes li,.ep__ann,.req__lede,.req__band,.req__row,.elig,.idx__col,.contact li,.foot';
+const FADE_SEL = '.lede,.pitch,.proof__cell,.tags--intro,.meta,.reach,.ep__tc,.ep__role,.tags,.ep__ref,.ep__notes li,.ep__ann,.req__lede,.req__band,.req__row,.elig,.idx__col,.contact li,.foot';
 document.querySelectorAll<HTMLElement>('.stage').forEach((stage) => {
   stage.querySelectorAll<HTMLElement>(FADE_SEL).forEach((el, i) => {
     el.setAttribute('data-fade', '');

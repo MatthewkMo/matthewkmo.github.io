@@ -195,6 +195,19 @@ html.static .calib__line{opacity:1}
   width:7px;height:7px;
   box-shadow:inset 0 0 0 1px var(--point-far);
 }
+/* an outward reference: the system pointing at the source behind an episode */
+.ep__ref{margin:14px 0 0}
+.ep__ref a{
+  display:inline-block;font-size:11px;letter-spacing:.08em;
+  color:var(--annotation);padding:5px 9px;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--annotation) 34%,transparent);
+  transition:background .3s var(--ease),box-shadow .3s var(--ease);
+}
+.ep__ref a:hover{
+  background:color-mix(in srgb,var(--annotation) 15%,transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--annotation) 65%,transparent);
+}
+
 .ep__ann{margin:28px 0 0;display:flex;align-items:center;color:var(--annotation)}
 .ep__ann .dot{
   width:5px;height:5px;background:var(--annotation);
