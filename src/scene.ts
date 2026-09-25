@@ -22,6 +22,7 @@ const VERT = /* glsl */`
   varying float vAnn;
   varying float vSeed;
   varying float vSheen;
+  varying float vShade;
 
   void main() {
     float r = uResolve;
@@ -37,6 +38,7 @@ const VERT = /* glsl */`
     // crossing waves, with the sheen taken from the slope of the height field
     // so the crests catch the light the way poured metal does
     vSheen = 0.0;
+    vShade = 1.0;
     if (uLiquid > 0.5) {
       float t = uTime * 0.28;
       vec2 q = p.xy * vec2(0.80, 1.15);
@@ -47,10 +49,15 @@ const VERT = /* glsl */`
       float h = A * sin(w1) + B * sin(w2) + C * sin(w3);
       float dhx = 0.80 * (A * cos(w1) + 0.7 * C * cos(w3));
       float dhy = 1.15 * (1.3 * B * cos(w2) + 0.7 * C * cos(w3));
-      p.z += h * 0.55 * r;
-      vec3 n = normalize(vec3(-dhx, -dhy, 2.0));
-      vec3 L = normalize(vec3(0.34, 0.62, 0.71));
-      vSheen = pow(max(dot(n, L), 0.0), 7.0) * r;
+      p.z += h * 0.95 * r;
+      vec3 n = normalize(vec3(-dhx, -dhy, 1.7));
+      vec3 key = normalize(vec3(0.34, 0.62, 0.71));
+      vec3 rim = normalize(vec3(-0.66, -0.28, 0.70));
+      float lambert = max(dot(n, key), 0.0);
+      // metal is contrast: a broad bright crest, a tight second glint, and
+      // troughs that fall much darker than the surrounding field
+      vSheen = (pow(lambert, 5.0) + pow(max(dot(n, rim), 0.0), 26.0) * 0.85) * r;
+      vShade = mix(1.0, mix(0.18, 1.15, lambert), r);
     }
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
@@ -63,7 +70,7 @@ const VERT = /* glsl */`
     gl_Position = projectionMatrix * mv;
     // size attenuation in the shader, as the sensor would report it
     gl_PointSize = uSize * aSize * uPR * (30.0 / max(dist, 1.0));
-    gl_PointSize *= 1.0 + vSheen * 0.45;
+    gl_PointSize *= 1.0 + min(vSheen, 1.0) * 0.7;
     gl_PointSize = clamp(gl_PointSize, 0.6, 9.0);
   }
 `;
@@ -80,6 +87,7 @@ const FRAG = /* glsl */`
   varying float vAnn;
   varying float vSeed;
   varying float vSheen;
+  varying float vShade;
 
   void main() {
     // round, soft-edged return
@@ -93,11 +101,12 @@ const FRAG = /* glsl */`
     col = mix(col, uFar, smoothstep(0.4, 1.0, vDepth));
     col = mix(col, uAnn, vAnn);
 
-    col = mix(col, vec3(0.97, 0.98, 1.0), vSheen * 0.8);
+    col *= vShade;
+    col = mix(col, vec3(0.98, 0.99, 1.0), min(vSheen, 1.0) * 0.92);
 
     float a = mask * uOpacity * mix(1.0, 0.34, vDepth);
     a *= mix(0.62, 1.0, vSeed);
-    a *= 1.0 + vSheen * 0.7;
+    a *= 1.0 + min(vSheen, 1.0) * 1.1;
     if (a < 0.008) discard;
     gl_FragColor = vec4(col, a);
   }
