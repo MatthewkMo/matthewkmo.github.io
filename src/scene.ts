@@ -16,7 +16,8 @@ const VERT = /* glsl */`
   uniform float uTime;
   uniform float uPR;
   uniform float uSize;
-  uniform float uLiquid;   // 0 none, 1 planar surface, 2 scanned body
+  uniform float uLiquid;   // 0 none, 1 poured surface, 2 body or box, 3 ground
+  uniform float uAmp;      // how far the surface is allowed to move
 
   varying float vDepth;
   varying float vAnn;
@@ -53,16 +54,27 @@ const VERT = /* glsl */`
         float h = A * sin(w1) + B * sin(w2) + C * sin(w3);
         float dhx = 0.80 * (A * cos(w1) + 0.7 * C * cos(w3));
         float dhy = 1.15 * (1.3 * B * cos(w2) + 0.7 * C * cos(w3));
-        p.z += h * 0.95 * r;
+        p.z += h * 0.95 * r * uAmp;
         n = normalize(vec3(-dhx, -dhy, 1.7));
-      } else {
-        // a scanned body: the normal points out from its axis, and a slow band
-        // travels up it, so the surface moves without losing its shape
+      } else if (uLiquid < 2.5) {
+        // a body or a box: the normal points out from its axis, and a slow
+        // band travels up it, so the surface moves without losing its shape
         vec3 d = p - vec3(0.0, -0.3, 0.0);
         n = length(d) > 0.001 ? d / length(d) : vec3(0.0, 0.0, 1.0);
         float flow = sin(p.y * 1.25 - uTime * 0.55 + p.x * 0.45);
-        p += n * flow * 0.09 * r;
+        p += n * flow * 0.09 * r * uAmp;
         n = normalize(n + vec3(0.0, flow * 0.28, 0.0));
+      } else {
+        // ground: the swell runs across the floor plane and lifts it
+        vec2 q = p.xz * vec2(0.42, 0.52);
+        float A = 0.55, B = 0.32;
+        float w1 = q.x + t * 0.9;
+        float w2 = (q.x + q.y) * 0.8 - t * 1.1;
+        float h = A * sin(w1) + B * sin(w2);
+        float dhx = 0.42 * (A * cos(w1) + 0.8 * B * cos(w2));
+        float dhz = 0.52 * (0.8 * B * cos(w2));
+        p.y += h * 0.45 * r * uAmp;
+        n = normalize(vec3(-dhx, 1.5, -dhz));
       }
 
       vec3 key = normalize(vec3(0.34, 0.62, 0.71));
@@ -70,8 +82,11 @@ const VERT = /* glsl */`
       float lambert = max(dot(n, key), 0.0);
       // metal is contrast: bright crests, troughs far darker than the field
       vSheen = (pow(lambert, 5.0) + pow(max(dot(n, rim), 0.0), 26.0) * 0.85) * r;
-      // the slab can fall almost black, but a body has to keep its silhouette
+      vSheen *= mix(0.55, 1.0, uAmp);
+      // a flat surface can fall almost black, a body has to keep its silhouette,
+      // and the quieter scenes only take as much contrast as they can carry
       float floorV = uLiquid < 1.5 ? 0.18 : 0.34;
+      floorV = mix(1.0, floorV, uAmp);
       vShade = mix(1.0, mix(floorV, 1.15, lambert), r);
     }
 
@@ -164,6 +179,13 @@ export class CaptureScene {
     this.camera = new PerspectiveCamera(52, 1, 0.5, 340);
     this.scene.fog = new Fog(new Color('#08090B').getHex(), 34, 128);
 
+    // every scene is metal; the mode follows the shape and the amplitude
+    // follows how much movement that shape can take without going illegible
+    const LIQUID: Record<string, [number, number]> = {
+      boot: [2, 0.55], figure: [2, 1.0], classroom: [3, 0.5],
+      lawn: [3, 0.85], crates: [2, 0.45], req: [1, 0.55], contact: [1, 1.0],
+    };
+
     // the last leg is shorter: while the index section reads, the closing slab
     // is already visible ahead as unresolved noise
     const POS = [0, -46, -92, -138, -184, -224, -253];
@@ -200,7 +222,8 @@ export class CaptureScene {
           uPR: { value: this.pr },
           uSize: { value: opts.mobile ? 1.5 : 1.75 },
           uOpacity: { value: 1 },
-          uLiquid: { value: vol.key === 'contact' ? 1 : vol.key === 'figure' ? 2 : 0 },
+          uLiquid: { value: LIQUID[vol.key]?.[0] ?? 0 },
+          uAmp: { value: LIQUID[vol.key]?.[1] ?? 0 },
           uFar: { value: new Color('#2E3A4A') },
           uMid: { value: new Color('#7C8794') },
           uNear: { value: new Color('#E8EAED') },
