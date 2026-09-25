@@ -99,15 +99,19 @@ body.looking #grab.dragging{cursor:grabbing}
   display:flex;align-items:center;
   padding:14vh var(--gut) clamp(160px,20vh,240px);
 }
-/* each section is its own panel, with the capture showing through it */
+/* each section is its own panel. The edge defines the segment; the fill only
+   backs the text column and clears away so the metal is visible, not frosted */
 .stage{
   margin:10px;
   border-radius:clamp(14px,1.4vw,22px);
-  background:color-mix(in srgb,var(--void) 66%,transparent);
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--point-far) 50%,transparent);
-  backdrop-filter:blur(3px);
+  background:linear-gradient(100deg,
+    color-mix(in srgb,var(--void) 94%,transparent) 0%,
+    color-mix(in srgb,var(--void) 80%,transparent) 38%,
+    color-mix(in srgb,var(--void) 24%,transparent) 70%,
+    transparent 100%);
 }
-html.static .stage{backdrop-filter:none;background:color-mix(in srgb,var(--void) 92%,transparent)}
+html.static .stage{background:color-mix(in srgb,var(--void) 92%,transparent)}
 .stage__inner,.ep{max-width:62ch;width:100%}
 /* the intro carries the most content, so it starts at the top rather than
    centring and overflowing into the readout */
@@ -420,8 +424,15 @@ html.static .hud{position:static;padding:0 var(--gut) 40px;justify-content:flex-
     background:linear-gradient(to top,var(--void) 62%,color-mix(in srgb,var(--void) 72%,transparent) 88%,transparent 100%);
     z-index:-1;pointer-events:none;
   }
-  /* narrow viewports: the panel carries more of the contrast */
-  .stage{background:color-mix(in srgb,var(--void) 86%,transparent)}
+  /* narrow viewports: copy runs the full width, so the fill reaches further
+     before it clears, but it still clears */
+  .stage{
+    background:linear-gradient(104deg,
+      color-mix(in srgb,var(--void) 95%,transparent) 0%,
+      color-mix(in srgb,var(--void) 88%,transparent) 55%,
+      color-mix(in srgb,var(--void) 42%,transparent) 84%,
+      color-mix(in srgb,var(--void) 10%,transparent) 100%);
+  }
   .hud{flex-direction:column-reverse;align-items:flex-start;gap:8px;bottom:14px}
   .tel{max-width:min(560px,94vw);width:100%;padding:9px 11px}
   .tel__h{margin-bottom:7px}
