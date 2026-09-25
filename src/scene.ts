@@ -16,10 +16,12 @@ const VERT = /* glsl */`
   uniform float uTime;
   uniform float uPR;
   uniform float uSize;
+  uniform float uLiquid;   // only the closing slab is a liquid surface
 
   varying float vDepth;
   varying float vAnn;
   varying float vSeed;
+  varying float vSheen;
 
   void main() {
     float r = uResolve;
@@ -31,6 +33,26 @@ const VERT = /* glsl */`
     p.y += cos(uTime * 0.37 + aSeed * 17.1) * j;
     p.z += sin(uTime * 0.29 + aSeed * 11.7) * j;
 
+    // the one fully resolved surface in the session keeps moving: three slow
+    // crossing waves, with the sheen taken from the slope of the height field
+    // so the crests catch the light the way poured metal does
+    vSheen = 0.0;
+    if (uLiquid > 0.5) {
+      float t = uTime * 0.28;
+      vec2 q = p.xy * vec2(0.80, 1.15);
+      float A = 0.50, B = 0.35, C = 0.25;
+      float w1 = q.x + t;
+      float w2 = q.y * 1.3 - t * 0.8;
+      float w3 = (q.x + q.y) * 0.7 + t * 1.3;
+      float h = A * sin(w1) + B * sin(w2) + C * sin(w3);
+      float dhx = 0.80 * (A * cos(w1) + 0.7 * C * cos(w3));
+      float dhy = 1.15 * (1.3 * B * cos(w2) + 0.7 * C * cos(w3));
+      p.z += h * 0.55 * r;
+      vec3 n = normalize(vec3(-dhx, -dhy, 2.0));
+      vec3 L = normalize(vec3(0.34, 0.62, 0.71));
+      vSheen = pow(max(dot(n, L), 0.0), 7.0) * r;
+    }
+
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     float dist = -mv.z;
 
@@ -41,6 +63,7 @@ const VERT = /* glsl */`
     gl_Position = projectionMatrix * mv;
     // size attenuation in the shader, as the sensor would report it
     gl_PointSize = uSize * aSize * uPR * (30.0 / max(dist, 1.0));
+    gl_PointSize *= 1.0 + vSheen * 0.45;
     gl_PointSize = clamp(gl_PointSize, 0.6, 9.0);
   }
 `;
@@ -56,6 +79,7 @@ const FRAG = /* glsl */`
   varying float vDepth;
   varying float vAnn;
   varying float vSeed;
+  varying float vSheen;
 
   void main() {
     // round, soft-edged return
@@ -69,8 +93,11 @@ const FRAG = /* glsl */`
     col = mix(col, uFar, smoothstep(0.4, 1.0, vDepth));
     col = mix(col, uAnn, vAnn);
 
+    col = mix(col, vec3(0.97, 0.98, 1.0), vSheen * 0.8);
+
     float a = mask * uOpacity * mix(1.0, 0.34, vDepth);
     a *= mix(0.62, 1.0, vSeed);
+    a *= 1.0 + vSheen * 0.7;
     if (a < 0.008) discard;
     gl_FragColor = vec4(col, a);
   }
@@ -148,6 +175,7 @@ export class CaptureScene {
           uPR: { value: this.pr },
           uSize: { value: opts.mobile ? 1.5 : 1.75 },
           uOpacity: { value: 1 },
+          uLiquid: { value: i === this.volumes.length - 1 ? 1 : 0 },
           uFar: { value: new Color('#2E3A4A') },
           uMid: { value: new Color('#7C8794') },
           uNear: { value: new Color('#E8EAED') },

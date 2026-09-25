@@ -43,6 +43,12 @@ npm run typecheck
 - **Green (`--annotation`) only marks things the system has annotated**: outcome
   metrics, bounding boxes around each volume, active state. **Orange (`--flag`)
   appears exactly twice**, both on Episode 04's quality-flag work.
+- **The closing slab is a liquid surface.** Three slow crossing waves displace it,
+  and the sheen comes from the slope of the height field, so crests catch the light.
+  It runs inside the existing point shader, in the existing greys: no second engine,
+  no extra dependency. Written from scratch rather than adapted from Paper Design's
+  liquid-logo, which is under a PolyForm Shield licence and would have put a
+  non-open-source notice in this repo.
 - **Camera** never binds to raw scroll. Lenis smooths the page; the scene follows
   a separately damped value (lerp 0.08) along six anchors measured from the real
   DOM, so the rail survives any layout change.
