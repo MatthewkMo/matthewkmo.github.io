@@ -208,7 +208,7 @@ html.static .calib__line{opacity:1}
   box-shadow:inset 0 0 0 1px var(--point-far);
 }
 /* an outward reference: the system pointing at the source behind an episode */
-.ep__ref{margin:14px 0 0}
+.ep__ref{margin:14px 0 0;display:flex;flex-wrap:wrap;gap:8px}
 .ep__ref a{
   border-radius:999px;
   display:inline-block;font-size:11px;letter-spacing:.08em;
