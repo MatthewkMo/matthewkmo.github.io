@@ -1,5 +1,5 @@
 /** The signature effect: headings resolve out of noise in staggered order,
- *  the way a scan fills in. Section headings only — nothing else gets this. */
+ *  the way a scan fills in. Section headings only: nothing else gets this. */
 
 const GLYPHS = '▚▞░▒▓▖▘▝▗·+*#';
 const glyph = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];

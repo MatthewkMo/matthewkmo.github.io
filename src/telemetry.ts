@@ -1,4 +1,4 @@
-/** Everything here is measured, not decorated. It also never leaves the tab —
+/** Everything here is measured, not decorated. It also never leaves the tab , 
  *  no storage, no network, no analytics. That claim is the point of the readout. */
 
 const pad = (n: number) => String(n).padStart(2, '0');

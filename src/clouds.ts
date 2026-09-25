@@ -49,7 +49,7 @@ function build(key: string, seedNum: number, count: number, radius: number, fill
   return { key, count, position, scatter, size, seed, ann, radius };
 }
 
-/** Wireframe bounding box, sampled as points. This is the annotation mark —
+/** Wireframe bounding box, sampled as points. This is the annotation mark , 
  *  the same thing you draw on capture data when you label an object in it. */
 function bbox(c: Ctx, cx: number, cy: number, cz: number, w: number, h: number, d: number, per = 26) {
   const hx = w / 2, hy = h / 2, hz = d / 2;
@@ -71,7 +71,7 @@ function bbox(c: Ctx, cx: number, cy: number, cz: number, w: number, h: number, 
   }
 }
 
-/* ── Mo Luxury Goods — a lattice of stacked crates ───────────────────── */
+/* ── Mo Luxury Goods: a lattice of stacked crates ───────────────────── */
 function crates(count: number): Volume {
   return build('crates', 1042, count, 9, (c) => {
     const stacks = 14;
@@ -85,7 +85,7 @@ function crates(count: number): Volume {
     const per = Math.floor((count * 0.9) / boxes.length);
     for (const [bx, by, bz, e] of boxes) {
       for (let p = 0; p < per; p++) {
-        // sample the shell of the crate, not its interior — depth sensors see surfaces
+        // sample the shell of the crate, not its interior: depth sensors see surfaces
         const face = Math.floor(c.rand() * 6);
         let x = (c.rand() - 0.5) * e, y = (c.rand() - 0.5) * e, z = (c.rand() - 0.5) * e;
         if (face === 0) x = e / 2; else if (face === 1) x = -e / 2;
@@ -98,7 +98,7 @@ function crates(count: number): Volume {
   });
 }
 
-/* ── Community Butler — lawn plane with rooftops ────────────────────── */
+/* ── Community Butler: lawn plane with rooftops ────────────────────── */
 function lawn(count: number): Volume {
   return build('lawn', 2277, count, 11, (c) => {
     const ground = Math.floor(count * 0.34);
@@ -138,7 +138,7 @@ function lawn(count: number): Volume {
   });
 }
 
-/* ── Simplify Tech — a room of desks, scanned in rows ───────────────── */
+/* ── Simplify Tech: a room of desks, scanned in rows ───────────────── */
 function classroom(count: number): Volume {
   return build('classroom', 3388, count, 10, (c) => {
     const cols = 6, rows = 5;
@@ -166,7 +166,7 @@ function classroom(count: number): Volume {
   });
 }
 
-/* ── Trace AI Labs — egocentric: a figure and two hands ─────────────── */
+/* ── Trace AI Labs: egocentric: a figure and two hands ─────────────── */
 function figure(count: number): Volume {
   return build('figure', 4416, count, 8, (c) => {
     const n = count;
@@ -182,7 +182,7 @@ function figure(count: number): Volume {
       const u = c.rand() * 2 - 1, a = c.rand() * Math.PI * 2, s = Math.sqrt(1 - u * u);
       c.push(Math.cos(a) * s * 0.66, 1.85 + u * 0.72, Math.sin(a) * s * 0.66, 0.95);
     }
-    // arms + hands reaching toward the viewer — the egocentric frame
+    // arms + hands reaching toward the viewer: the egocentric frame
     for (let p = 0; p < hands; p++) {
       const side = c.rand() < 0.5 ? -1 : 1;
       const t = c.rand();
@@ -274,7 +274,7 @@ export function buildVolumes(budget: number): Volume[] {
   const b = (f: number) => Math.max(600, Math.floor(budget * f));
   return [
     field(b(0.15)),
-    // résumé order, newest first — the camera visits these in page order
+    // résumé order, newest first: the camera visits these in page order
     figure(b(0.14)),      // EP 01 · Trace AI Labs
     classroom(b(0.14)),   // EP 02 · Simplify Tech
     lawn(b(0.14)),        // EP 03 · Community Butler

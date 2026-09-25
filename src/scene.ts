@@ -115,7 +115,7 @@ export class CaptureScene {
     // the last leg is shorter: while the index section reads, the closing slab
     // is already visible ahead as unresolved noise
     const POS = [0, -46, -92, -138, -184, -224, -253];
-    // per-volume framing: each scene is looked at the way its subject reads —
+    // per-volume framing: each scene is looked at the way its subject reads , 
     // down at a lawn, level with a person, straight on at the closing slab
     const FRAME: { eye: [number, number, number]; look: [number, number, number] }[] = [
       { eye: [0, 1.2, 17.5], look: [0, 0.4, 0] },      // boot noise

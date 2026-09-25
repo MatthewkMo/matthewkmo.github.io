@@ -1,4 +1,4 @@
-/** Deterministic, tiny PRNG + value noise. Nothing here ships as data — the
+/** Deterministic, tiny PRNG + value noise. Nothing here ships as data: the
  *  entire world is regenerated from these seeds at load. */
 
 export function mulberry32(seed: number) {

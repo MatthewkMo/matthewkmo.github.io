@@ -14,7 +14,7 @@ function webglOK(): boolean {
 
 const mobile = window.matchMedia('(max-width: 700px)').matches
   || (navigator.hardwareConcurrency ?? 8) <= 4;
-// ?doc forces the plain document — the same thing reduced-motion and no-WebGL get
+// ?doc forces the plain document: the same thing reduced-motion and no-WebGL get
 const forced = new URLSearchParams(location.search).has('doc');
 const STATIC = forced || reduced || !webglOK();
 
@@ -125,7 +125,7 @@ async function boot() {
   measure();
   window.addEventListener('resize', measure);
   /* webfonts change every heading's height, so the rail is re-measured once
-     they land — and a hash link is re-seated against the settled layout */
+     they land: and a hash link is re-seated against the settled layout */
   const settle = () => {
     measure();
     const id = location.hash.slice(1);
@@ -146,7 +146,7 @@ async function boot() {
     return marks.length - 1;
   };
 
-  /* damped scroll — scene state never binds to raw scroll position */
+  /* damped scroll: scene state never binds to raw scroll position */
   let damped = 0;
   let targetY = 0;
   const introGate = (y: number) => document.body.classList.toggle('at-intro', y < window.innerHeight * 0.3);
