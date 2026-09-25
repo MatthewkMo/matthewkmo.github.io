@@ -18,17 +18,10 @@ const mobile = window.matchMedia('(max-width: 700px)').matches
 const forced = new URLSearchParams(location.search).has('doc');
 const STATIC = forced || reduced || !webglOK();
 
-/* ── fade-in staging for body copy ─────────────────────────────────────── */
-const FADE_SEL = '.lede,.pitch,.proof__cell,.tags--intro,.meta,.reach,.ep__tc,.ep__role,.tags,.ep__ref,.ep__notes li,.ep__ann,.req__lede,.req__band,.req__row,.elig,.idx__col,.contact li,.foot';
-document.querySelectorAll<HTMLElement>('.stage').forEach((stage) => {
-  stage.querySelectorAll<HTMLElement>(FADE_SEL).forEach((el, i) => {
-    el.setAttribute('data-fade', '');
-    el.style.transitionDelay = `${Math.min(i * 55, 440)}ms`;
-  });
-});
-
-const headings = Array.from(document.querySelectorAll<HTMLElement>('[data-resolve]'));
-if (!STATIC) headings.forEach(prepare);
+/* the character resolve is kept for the name alone: it is the calibration
+   moment, not something that fires again on every heading you scroll past */
+const nameHeading = document.querySelector<HTMLElement>('#boot [data-resolve]');
+if (!STATIC && nameHeading) prepare(nameHeading);
 
 /* ── telemetry (measured in this tab, kept in this tab) ────────────────── */
 const episodeStages = Array.from(document.querySelectorAll<HTMLElement>('.stage--ep'));
@@ -54,19 +47,15 @@ if (STATIC) {
 }
 
 /* ── the capture session ───────────────────────────────────────────────── */
-/* Three and Lenis load only when we are actually going to render. A recruiter on
-   a locked-down machine, or anyone with reduced motion on, never downloads them. */
+/* Three loads only when we are actually going to render. A recruiter on a
+   locked-down machine, or anyone with reduced motion on, never downloads it.
+   Scrolling is the browser's own: the page is never hijacked. */
 async function boot() {
-  const [{ CaptureScene }, { default: Lenis }] = await Promise.all([
-    import('./scene'),
-    import('lenis'),
-  ]);
+  const { CaptureScene } = await import('./scene');
   const canvas = document.getElementById('scene') as HTMLCanvasElement;
   const scene = new CaptureScene(canvas, { mobile });
   const pointsCell = document.getElementById('t-points');
   if (pointsCell) pointsCell.textContent = scene.pointTotal.toLocaleString('en-US');
-
-  const lenis = new Lenis({ lerp: 0.1, wheelMultiplier: 0.9, touchMultiplier: 1.4 });
 
   /* calibration: three lines, then the name resolves. Under 1.5s, no progress bar. */
   const lines = Array.from(document.querySelectorAll<HTMLElement>('.calib__line'));
@@ -74,7 +63,7 @@ async function boot() {
   const bootStage = document.getElementById('boot')!;
   setTimeout(() => {
     bootStage.classList.add('is-active');
-    resolve(document.querySelector<HTMLElement>('#boot [data-resolve]')!);
+    if (nameHeading) resolve(nameHeading);
   }, 620);
 
   /* headings resolve on arrival */
@@ -83,8 +72,6 @@ async function boot() {
       if (!e.isIntersecting) return;
       const stage = e.target as HTMLElement;
       stage.classList.add('is-active');
-      const h = stage.querySelector<HTMLElement>('[data-resolve]');
-      if (h && stage.id !== 'boot') resolve(h);
       const idx = episodeStages.indexOf(stage);
       if (idx >= 0) tel.markEpisode(idx);
     });
@@ -98,11 +85,7 @@ async function boot() {
     const vh = window.innerHeight;
     for (const st of stages) {
       const r = st.getBoundingClientRect();
-      if (r.bottom > 0 && r.top < vh && !st.classList.contains('is-active')) {
-        st.classList.add('is-active');
-        const h = st.querySelector<HTMLElement>('[data-resolve]');
-        if (h) resolve(h);
-      }
+      if (r.bottom > 0 && r.top < vh && !st.classList.contains('is-active')) st.classList.add('is-active');
     }
   };
 
@@ -130,7 +113,7 @@ async function boot() {
     measure();
     const id = location.hash.slice(1);
     const el = id && document.getElementById(id);
-    if (el) lenis.scrollTo(el, { immediate: true });
+    if (el) el.scrollIntoView();
     sweep();
   };
   if (document.fonts?.ready) document.fonts.ready.then(() => requestAnimationFrame(settle));
@@ -151,12 +134,10 @@ async function boot() {
   let targetY = 0;
   const introGate = (y: number) => document.body.classList.toggle('at-intro', y < window.innerHeight * 0.3);
   introGate(0);
-  lenis.on('scroll', ({ targetScroll }: any) => {
-    introGate(targetScroll);
+  window.addEventListener('scroll', () => {
     // any real scroll re-captures the camera, exactly as the label promises
-    if (Math.abs(targetScroll - targetY) > 4) setLook(false);
-    targetY = targetScroll;
-  });
+    if (Math.abs(window.scrollY - targetY) > 4) setLook(false);
+  }, { passive: true });
 
   /* free look */
   const btnLook = document.getElementById('btn-look') as HTMLButtonElement;
@@ -213,7 +194,7 @@ async function boot() {
       return d < best.d ? { i, d } : best;
     }, { i: 0, d: Infinity }).i;
     const next = Math.max(0, Math.min(jumpTargets.length - 1, cur + (e.key === 'ArrowRight' ? 1 : -1)));
-    lenis.scrollTo(jumpTargets[next], { offset: 0 });
+    jumpTargets[next].scrollIntoView({ behavior: 'smooth' });
     jumpTargets[next].focus({ preventScroll: true });
   });
 
@@ -227,7 +208,7 @@ async function boot() {
     if (!el) return;
     e.preventDefault();
     setLook(false);
-    lenis.scrollTo(el, { offset: 0 });
+    el.scrollIntoView({ behavior: 'smooth' });
     el.focus({ preventScroll: true });
     history.replaceState(null, '', `#${id}`);
   });
@@ -237,12 +218,10 @@ async function boot() {
     const t = e.target as HTMLElement;
     if (!t.closest || t.closest('.hud')) return;
     const stage = t.closest('.stage') as HTMLElement | null;
-    if (stage && Math.abs(stage.getBoundingClientRect().top) > window.innerHeight * 0.6) lenis.scrollTo(stage);
+    if (stage && Math.abs(stage.getBoundingClientRect().top) > window.innerHeight * 0.6) stage.scrollIntoView({ behavior: 'smooth' });
   });
 
-  if (import.meta.env.DEV) (window as any).__lenis = lenis;
-
-  wireTelemetry(() => targetY / Math.max(1, document.body.scrollHeight - window.innerHeight));
+  wireTelemetry(() => window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight));
 
   /* ── loop ──────────────────────────────────────────────────────────── */
   let raf = 0, prev = performance.now(), running = true;
@@ -250,8 +229,9 @@ async function boot() {
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - prev) / 1000);
     prev = now;
-    lenis.raf(now);
-    damped += (progressAt(targetY) - damped) * 0.08;   // inertia, lerp ~0.08
+    targetY = window.scrollY;
+    introGate(targetY);
+    damped += (progressAt(targetY) - damped) * 0.08;   // the camera eases, the page does not
     scene.update(damped, dt);
     if (import.meta.env.DEV) (window as any).__cap = { damped, targetY, marks, cam: scene.camera.position.toArray(), vols: scene.debugVolumes() };
   };

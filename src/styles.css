@@ -7,8 +7,8 @@
   --annotation:#4ADE9B;
   --flag:#E8654A;
 
-  --display:"Inter Tight","Helvetica Neue",Helvetica,Arial,sans-serif;
-  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --display:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
 
   --gut:clamp(20px,5vw,72px);
   --ease:cubic-bezier(0.16,1,0.3,1);
@@ -22,7 +22,6 @@ body{
   color:var(--point-near);
   font-size:17px;
   line-height:1.6;
-  letter-spacing:-0.01em;
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
 }
@@ -119,8 +118,8 @@ html.static .calib__line{opacity:1}
 .display{
   font-family:var(--display);
   font-weight:600;
-  letter-spacing:-0.03em;
-  line-height:1.02;
+  letter-spacing:-0.02em;
+  line-height:1.04;
   margin:0;
   color:var(--point-near);
 }
@@ -150,7 +149,7 @@ html.static .calib__line{opacity:1}
 /* these are annotated outcomes, so they carry the annotation colour */
 .proof__n{
   margin:0;font-family:var(--display);font-weight:600;
-  font-size:clamp(26px,2.5vw,36px);letter-spacing:-0.03em;line-height:1;
+  font-size:clamp(26px,2.5vw,36px);letter-spacing:-0.02em;line-height:1;
   color:var(--annotation);
 }
 .proof__k{
@@ -383,18 +382,20 @@ html.static #btn-look{display:none}
 }
 .js [data-resolve].is-resolved .ch{opacity:1;transform:none;filter:none}
 
-/* copy fades in with the volume it belongs to */
-.js .stage [data-fade]{
-  opacity:0;transform:translate3d(0,10px,0);
-  transition:opacity .8s var(--ease),transform .8s var(--ease);
+/* each section arrives once, as a whole: no per-element stagger */
+.js .stage .stage__inner,
+.js .stage .ep{
+  opacity:0;transform:translate3d(0,6px,0);
+  transition:opacity .45s var(--ease),transform .45s var(--ease);
 }
-.js .stage.is-active [data-fade]{opacity:1;transform:none}
+.js .stage.is-active .stage__inner,
+.js .stage.is-active .ep{opacity:1;transform:none}
 
 /* ── static / reduced-motion document ───────────────────────────────── */
 html.static body{background:var(--void)}
 html.static .stage{min-height:auto;padding:9vh var(--gut);border-top:1px solid color-mix(in srgb,var(--point-far) 55%,transparent)}
 html.static .stage--boot{border-top:0;min-height:auto;padding-top:14vh}
-html.static [data-resolve] .ch,html.static [data-fade]{opacity:1!important;transform:none!important;filter:none!important}
+html.static [data-resolve] .ch,html.static .stage__inner,html.static .ep{opacity:1!important;transform:none!important;filter:none!important}
 html.static .hud{position:static;padding:0 var(--gut) 40px;justify-content:flex-start}
 
 @media (prefers-reduced-motion:reduce){
