@@ -16,7 +16,7 @@ const VERT = /* glsl */`
   uniform float uTime;
   uniform float uPR;
   uniform float uSize;
-  uniform float uLiquid;   // only the closing slab is a liquid surface
+  uniform float uLiquid;   // 0 none, 1 planar surface, 2 scanned body
 
   varying float vDepth;
   varying float vAnn;
@@ -41,23 +41,38 @@ const VERT = /* glsl */`
     vShade = 1.0;
     if (uLiquid > 0.5) {
       float t = uTime * 0.28;
-      vec2 q = p.xy * vec2(0.80, 1.15);
-      float A = 0.50, B = 0.35, C = 0.25;
-      float w1 = q.x + t;
-      float w2 = q.y * 1.3 - t * 0.8;
-      float w3 = (q.x + q.y) * 0.7 + t * 1.3;
-      float h = A * sin(w1) + B * sin(w2) + C * sin(w3);
-      float dhx = 0.80 * (A * cos(w1) + 0.7 * C * cos(w3));
-      float dhy = 1.15 * (1.3 * B * cos(w2) + 0.7 * C * cos(w3));
-      p.z += h * 0.95 * r;
-      vec3 n = normalize(vec3(-dhx, -dhy, 1.7));
+      vec3 n;
+
+      if (uLiquid < 1.5) {
+        // a poured surface: three slow crossing waves, normal from the slope
+        vec2 q = p.xy * vec2(0.80, 1.15);
+        float A = 0.50, B = 0.35, C = 0.25;
+        float w1 = q.x + t;
+        float w2 = q.y * 1.3 - t * 0.8;
+        float w3 = (q.x + q.y) * 0.7 + t * 1.3;
+        float h = A * sin(w1) + B * sin(w2) + C * sin(w3);
+        float dhx = 0.80 * (A * cos(w1) + 0.7 * C * cos(w3));
+        float dhy = 1.15 * (1.3 * B * cos(w2) + 0.7 * C * cos(w3));
+        p.z += h * 0.95 * r;
+        n = normalize(vec3(-dhx, -dhy, 1.7));
+      } else {
+        // a scanned body: the normal points out from its axis, and a slow band
+        // travels up it, so the surface moves without losing its shape
+        vec3 d = p - vec3(0.0, -0.3, 0.0);
+        n = length(d) > 0.001 ? d / length(d) : vec3(0.0, 0.0, 1.0);
+        float flow = sin(p.y * 1.25 - uTime * 0.55 + p.x * 0.45);
+        p += n * flow * 0.09 * r;
+        n = normalize(n + vec3(0.0, flow * 0.28, 0.0));
+      }
+
       vec3 key = normalize(vec3(0.34, 0.62, 0.71));
       vec3 rim = normalize(vec3(-0.66, -0.28, 0.70));
       float lambert = max(dot(n, key), 0.0);
-      // metal is contrast: a broad bright crest, a tight second glint, and
-      // troughs that fall much darker than the surrounding field
+      // metal is contrast: bright crests, troughs far darker than the field
       vSheen = (pow(lambert, 5.0) + pow(max(dot(n, rim), 0.0), 26.0) * 0.85) * r;
-      vShade = mix(1.0, mix(0.18, 1.15, lambert), r);
+      // the slab can fall almost black, but a body has to keep its silhouette
+      float floorV = uLiquid < 1.5 ? 0.18 : 0.34;
+      vShade = mix(1.0, mix(floorV, 1.15, lambert), r);
     }
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
@@ -101,8 +116,8 @@ const FRAG = /* glsl */`
     col = mix(col, uFar, smoothstep(0.4, 1.0, vDepth));
     col = mix(col, uAnn, vAnn);
 
-    col *= vShade;
-    col = mix(col, vec3(0.98, 0.99, 1.0), min(vSheen, 1.0) * 0.92);
+    col *= mix(vShade, 1.0, vAnn);
+    col = mix(col, vec3(0.98, 0.99, 1.0), min(vSheen, 1.0) * 0.92 * (1.0 - vAnn));
 
     float a = mask * uOpacity * mix(1.0, 0.34, vDepth);
     a *= mix(0.62, 1.0, vSeed);
@@ -184,7 +199,7 @@ export class CaptureScene {
           uPR: { value: this.pr },
           uSize: { value: opts.mobile ? 1.5 : 1.75 },
           uOpacity: { value: 1 },
-          uLiquid: { value: i === this.volumes.length - 1 ? 1 : 0 },
+          uLiquid: { value: vol.key === 'contact' ? 1 : vol.key === 'figure' ? 2 : 0 },
           uFar: { value: new Color('#2E3A4A') },
           uMid: { value: new Color('#7C8794') },
           uNear: { value: new Color('#E8EAED') },
