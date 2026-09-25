@@ -4,60 +4,41 @@ import { Telemetry } from './telemetry';
 const doc = document.documentElement;
 if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-function webglOK(): boolean {
-  try {
-    const c = document.createElement('canvas');
-    return !!(c.getContext('webgl2') || c.getContext('webgl'));
-  } catch { return false; }
-}
-
+const forced = new URLSearchParams(location.search).has('doc');
 const mobile = window.matchMedia('(max-width: 700px)').matches
   || (navigator.hardwareConcurrency ?? 8) <= 4;
-// ?doc forces the plain document: the same thing reduced-motion and no-WebGL get
-const forced = new URLSearchParams(location.search).has('doc');
-const STATIC = forced || reduced || !webglOK();
 
 /* the character resolve is kept for the name alone: it is the calibration
-   moment, not something that fires again on every heading you scroll past */
+   moment, not something that fires again on every heading scrolled past */
 const nameHeading = document.querySelector<HTMLElement>('#boot [data-resolve]');
-if (!STATIC && nameHeading) prepare(nameHeading);
-
-/* ── telemetry (measured in this tab, kept in this tab) ────────────────── */
 const episodeStages = Array.from(document.querySelectorAll<HTMLElement>('.stage--ep'));
-const tel = new Telemetry(episodeStages.length, 0);
+const tel = new Telemetry(episodeStages.length);
 
-/* ── static document: reduced motion, or no WebGL ──────────────────────── */
-if (STATIC) {
+function staticDocument() {
   doc.classList.add('static');
   document.getElementById('scene')?.remove();
-  document.getElementById('btn-look')?.remove();
   document.querySelectorAll<HTMLElement>('.stage').forEach((s) => s.classList.add('is-active'));
-  const pointsCell = document.getElementById('t-points');
-  if (pointsCell) pointsCell.textContent = 'STATIC';
-  const calib = document.getElementById('calib');
-  if (calib) calib.querySelectorAll('.calib__line').forEach((l) => l.classList.add('on'));
-  wireTelemetry(() => window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight));
+  wireTelemetry();
   const seen = new IntersectionObserver((es) => {
     es.forEach((e) => { if (e.isIntersecting) tel.markEpisode(episodeStages.indexOf(e.target as HTMLElement)); });
   }, { threshold: 0.35 });
   episodeStages.forEach((s) => seen.observe(s));
-} else {
-  boot();
 }
 
-/* ── the capture session ───────────────────────────────────────────────── */
-/* Three loads only when we are actually going to render. A recruiter on a
-   locked-down machine, or anyone with reduced motion on, never downloads it.
-   Scrolling is the browser's own: the page is never hijacked. */
-async function boot() {
-  const { CaptureScene } = await import('./scene');
-  const canvas = document.getElementById('scene') as HTMLCanvasElement;
-  const scene = new CaptureScene(canvas, { mobile });
-  const pointsCell = document.getElementById('t-points');
-  if (pointsCell) pointsCell.textContent = scene.pointTotal.toLocaleString('en-US');
+if (forced || reduced) {
+  staticDocument();
+} else {
+  boot().catch(staticDocument);   // no WebGL, or the surface failed: serve the document
+}
 
-  /* calibration: three lines, then the name resolves. Under 1.5s, no progress bar. */
+async function boot() {
+  const canvas = document.getElementById('scene') as HTMLCanvasElement;
+  const [{ MetalSurface }, { SHAPES }] = await Promise.all([import('./metal'), import('./shapes')]);
+  const metal = new MetalSurface(canvas, { mobile }, SHAPES[0]);
+
+  if (nameHeading) prepare(nameHeading);
+
+  /* calibration: three lines, then the name resolves */
   const lines = Array.from(document.querySelectorAll<HTMLElement>('.calib__line'));
   lines.forEach((l, i) => setTimeout(() => l.classList.add('on'), 90 + i * 165));
   const bootStage = document.getElementById('boot')!;
@@ -66,7 +47,7 @@ async function boot() {
     if (nameHeading) resolve(nameHeading);
   }, 620);
 
-  /* headings resolve on arrival */
+  const stages = Array.from(document.querySelectorAll<HTMLElement>('.stage'));
   const io = new IntersectionObserver((entries) => {
     entries.forEach((e) => {
       if (!e.isIntersecting) return;
@@ -76,41 +57,36 @@ async function boot() {
       if (idx >= 0) tel.markEpisode(idx);
     });
   }, { threshold: 0, rootMargin: '0px' });
-  const stages = Array.from(document.querySelectorAll<HTMLElement>('.stage'));
   stages.forEach((s) => io.observe(s));
 
-  /* belt and braces: anything already on screen is activated outright, so a
-     deep link (/#req) can never land on unrevealed copy */
+  /* belt and braces: anything already on screen is revealed outright, so a
+     deep link can never land on unrevealed copy */
   const sweep = () => {
     const vh = window.innerHeight;
     for (const st of stages) {
       const r = st.getBoundingClientRect();
-      if (r.bottom > 0 && r.top < vh && !st.classList.contains('is-active')) st.classList.add('is-active');
+      if (r.bottom > 0 && r.top < vh) st.classList.add('is-active');
     }
   };
 
-  /* scroll → camera rail. Anchors are measured from the real document. */
-  const anchorStages = [
-    document.getElementById('boot')!,
-    ...episodeStages,
-    document.getElementById('req')!,
-    document.getElementById('contact')!,
-  ];
-  let marks: number[] = [];
-  const measure = () => {
-    const vh = window.innerHeight;
-    marks = anchorStages.map((s) => {
-      const r = s.getBoundingClientRect();
-      return r.top + window.scrollY + r.height / 2 - vh / 2;
-    });
-    scene.resize();
+  /* which segment holds the viewport: the metal flows toward its shape */
+  const anchors = [document.getElementById('boot')!, ...episodeStages,
+                   document.getElementById('req')!, document.getElementById('contact')!];
+  const activeIndex = () => {
+    const mid = window.innerHeight / 2;
+    let best = 0, bestD = Infinity;
+    for (let i = 0; i < anchors.length; i++) {
+      const r = anchors[i].getBoundingClientRect();
+      if (r.top <= mid && r.bottom >= mid) return i;
+      const d = Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid));
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
   };
-  measure();
-  window.addEventListener('resize', measure);
-  /* webfonts change every heading's height, so the rail is re-measured once
-     they land: and a hash link is re-seated against the settled layout */
+
+  window.addEventListener('resize', () => metal.resize());
   const settle = () => {
-    measure();
+    metal.resize();
     const id = location.hash.slice(1);
     const el = id && document.getElementById(id);
     if (el) el.scrollIntoView();
@@ -119,94 +95,12 @@ async function boot() {
   if (document.fonts?.ready) document.fonts.ready.then(() => requestAnimationFrame(settle));
   else window.addEventListener('load', settle);
   window.setTimeout(sweep, 1400);
-  window.addEventListener('orientationchange', () => setTimeout(measure, 240));
 
-  /* which segment currently fills the viewport. The camera holds one settled
-     view per segment and cuts when a new one takes over, so nothing in the
-     scene is driven by scroll position. */
-  const activeIndex = () => {
-    const mid = window.innerHeight / 2;
-    let best = 0, bestD = Infinity;
-    for (let i = 0; i < anchorStages.length; i++) {
-      const r = anchorStages[i].getBoundingClientRect();
-      if (r.top <= mid && r.bottom >= mid) return i;
-      const d = Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid));
-      if (d < bestD) { bestD = d; best = i; }
-    }
-    return best;
-  };
-
-  /* damped scroll: scene state never binds to raw scroll position */
-  let damped = 0;
-  let targetY = 0;
-  const introGate = (y: number) => document.body.classList.toggle('at-intro', y < window.innerHeight * 0.3);
-  introGate(0);
-  window.addEventListener('scroll', () => {
-    // any real scroll re-captures the camera, exactly as the label promises
-    if (Math.abs(window.scrollY - targetY) > 4) setLook(false);
-  }, { passive: true });
-
-  /* free look */
-  const btnLook = document.getElementById('btn-look') as HTMLButtonElement;
-  const grab = document.getElementById('grab') as HTMLElement;
-  let looking = false;
-  const setLook = (on: boolean) => {
-    if (looking === on) return;
-    looking = on;
-    scene.setFreeLook(on);
-    btnLook.setAttribute('aria-pressed', String(on));
-    document.body.classList.toggle('looking', on);
-    if (!on) grab.classList.remove('dragging');
-  };
-  btnLook.addEventListener('click', () => setLook(!looking));
-
-  let dragging = false, px = 0, py = 0;
-  grab.addEventListener('pointerdown', (e) => {
-    if (!looking) return;
-    dragging = true; px = e.clientX; py = e.clientY;
-    grab.setPointerCapture(e.pointerId); grab.classList.add('dragging');
-  });
-  grab.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    scene.orbit(e.clientX - px, e.clientY - py);
-    px = e.clientX; py = e.clientY;
-  });
-  const endDrag = () => { dragging = false; grab.classList.remove('dragging'); };
-  grab.addEventListener('pointerup', endDrag);
-  grab.addEventListener('pointercancel', endDrag);
-  // scroll re-captures the camera, as promised on the label
-  window.addEventListener('wheel', () => setLook(false), { passive: true });
-  window.addEventListener('keydown', (e) => { if (e.key.startsWith('Arrow') || e.key === ' ') setLook(false); });
-
-  /* pointer: parallax + telemetry */
   window.addEventListener('pointermove', (e) => {
-    scene.setPointer((e.clientX / window.innerWidth) * 2 - 1, (e.clientY / window.innerHeight) * 2 - 1);
+    metal.setPointer((e.clientX / window.innerWidth) * 2 - 1, (e.clientY / window.innerHeight) * 2 - 1);
   }, { passive: true });
 
-  /* keyboard traversal of episodes */
-  const jumpTargets = [
-    document.getElementById('boot')!,
-    ...episodeStages,
-    document.getElementById('req')!,
-    document.getElementById('index')!,
-    document.getElementById('contact')!,
-  ];
-  window.addEventListener('keydown', (e) => {
-    const tag = (e.target as HTMLElement)?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    e.preventDefault();
-    const cur = jumpTargets.reduce((best, s, i) => {
-      const d = Math.abs(s.getBoundingClientRect().top - window.innerHeight * 0.3);
-      return d < best.d ? { i, d } : best;
-    }, { i: 0, d: Infinity }).i;
-    const next = Math.max(0, Math.min(jumpTargets.length - 1, cur + (e.key === 'ArrowRight' ? 1 : -1)));
-    jumpTargets[next].scrollIntoView({ behavior: 'smooth' });
-    jumpTargets[next].focus({ preventScroll: true });
-  });
-
-  /* in-page links (the jump, and every EP reference in the annotation pass)
-     travel along the rail rather than teleporting past it */
+  /* in-page links travel with the page rather than teleporting past it */
   document.addEventListener('click', (e) => {
     const a = (e.target as HTMLElement)?.closest?.('a[href^="#"]') as HTMLAnchorElement | null;
     if (!a) return;
@@ -214,51 +108,62 @@ async function boot() {
     const el = id && document.getElementById(id);
     if (!el) return;
     e.preventDefault();
-    setLook(false);
     el.scrollIntoView({ behavior: 'smooth' });
     el.focus({ preventScroll: true });
     history.replaceState(null, '', `#${id}`);
   });
 
-  /* focus follows tab order without fighting smooth scroll */
+  /* keyboard traversal of the segments */
+  const jump = [...anchors.slice(0, -1), document.getElementById('index')!, anchors[anchors.length - 1]];
+  window.addEventListener('keydown', (e) => {
+    const tag = (e.target as HTMLElement)?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const cur = jump.reduce((best, s, i) => {
+      const d = Math.abs(s.getBoundingClientRect().top - window.innerHeight * 0.3);
+      return d < best.d ? { i, d } : best;
+    }, { i: 0, d: Infinity }).i;
+    const next = Math.max(0, Math.min(jump.length - 1, cur + (e.key === 'ArrowRight' ? 1 : -1)));
+    jump[next].scrollIntoView({ behavior: 'smooth' });
+    jump[next].focus({ preventScroll: true });
+  });
+
   document.addEventListener('focusin', (e) => {
     const t = e.target as HTMLElement;
     if (!t.closest || t.closest('.hud')) return;
     const stage = t.closest('.stage') as HTMLElement | null;
-    if (stage && Math.abs(stage.getBoundingClientRect().top) > window.innerHeight * 0.6) stage.scrollIntoView({ behavior: 'smooth' });
+    if (stage && Math.abs(stage.getBoundingClientRect().top) > window.innerHeight * 0.6) {
+      stage.scrollIntoView({ behavior: 'smooth' });
+    }
   });
 
-  wireTelemetry(() => window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight));
+  wireTelemetry();
 
-  /* ── loop ──────────────────────────────────────────────────────────── */
-  let raf = 0, prev = performance.now(), running = true;
+  let raf = 0, running = true, shape = -1;
   const frame = (now: number) => {
     raf = requestAnimationFrame(frame);
-    const dt = Math.min(0.05, (now - prev) / 1000);
-    prev = now;
-    targetY = window.scrollY;
-    introGate(targetY);
     const a = activeIndex();
-    if (a !== damped) { damped = a; scene.cut(); }
-    scene.update(damped, dt);
-    if (import.meta.env.DEV) (window as any).__cap = { damped, targetY, marks, cam: scene.camera.position.toArray(), vols: scene.debugVolumes() };
+    if (a !== shape) { shape = a; metal.setTarget(SHAPES[a]); }
+    document.body.classList.toggle('at-intro', window.scrollY < window.innerHeight * 0.3);
+    metal.render(now);
+    if (import.meta.env.DEV) (window as any).__cap = { shape, y: Math.round(window.scrollY) };
   };
   raf = requestAnimationFrame(frame);
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && running) { cancelAnimationFrame(raf); running = false; }
-    else if (!document.hidden && !running) { running = true; prev = performance.now(); raf = requestAnimationFrame(frame); }
+    else if (!document.hidden && !running) { running = true; raf = requestAnimationFrame(frame); }
   });
 }
 
-/* ── telemetry wiring shared by both modes ─────────────────────────────── */
-function wireTelemetry(scrub: () => number) {
+function wireTelemetry() {
   let last = 0;
   const tick = (now: number) => {
     requestAnimationFrame(tick);
-    if (now - last < 200) return;                       // the readout is quiet, not frantic
+    if (now - last < 200) return;          // the readout is quiet, not frantic
     last = now;
-    tel.setScrub(scrub());
+    tel.setScrub(window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight));
     tel.render();
   };
   requestAnimationFrame(tick);

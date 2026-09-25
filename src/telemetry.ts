@@ -11,11 +11,10 @@ export class Telemetry {
   private scrub = 0;
   private el: Record<string, HTMLElement> = {};
 
-  constructor(private episodes: number, points: number) {
-    for (const k of ['session', 'scrub', 'pointer', 'eps', 'points']) {
+  constructor(private episodes: number) {
+    for (const k of ['session', 'scrub', 'pointer', 'eps']) {
       this.el[k] = document.getElementById(`t-${k}`)!;
     }
-    this.el.points.textContent = points.toLocaleString('en-US');
   }
 
   pointer(x: number, y: number) {
