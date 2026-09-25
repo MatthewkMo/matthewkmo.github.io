@@ -369,10 +369,6 @@ html.static #btn-look{display:none}
 }
 .tel__grid dt{color:var(--point-mid)}
 .tel__grid dd{margin:0;color:var(--point-near);text-align:right;font-variant-numeric:tabular-nums}
-.tel__note{
-  margin:10px 0 0;font-size:10px;letter-spacing:.06em;text-transform:none;
-  color:var(--point-mid);max-width:30ch;line-height:1.45;
-}
 
 .ctl{display:flex;gap:8px}
 .btn{
@@ -444,8 +440,7 @@ html.static .hud{position:static;padding:0 var(--gut) 40px;justify-content:flex-
   .tel__grid dt{color:var(--point-mid)}
   .tel__grid dt::after{content:" "}
   .tel__grid dd{text-align:left;margin-right:6px}
-  .tel__note{margin-top:7px;max-width:none}
-  .stage{padding-bottom:clamp(190px,24vh,260px)}
+    .stage{padding-bottom:clamp(190px,24vh,260px)}
 }
 @media (max-width:560px){
   body{font-size:16px}
@@ -455,12 +450,10 @@ html.static .hud{position:static;padding:0 var(--gut) 40px;justify-content:flex-
   .tel{padding:7px 9px}
   .tel__h{margin-bottom:5px;font-size:10px}
   .tel__grid{font-size:10px;column-gap:10px}
-  .tel__note{font-size:9.5px;margin-top:5px}
-  .btn{padding:8px 10px;font-size:10px}
+    .btn{padding:8px 10px;font-size:10px}
   .contact li{gap:6px}
   .contact__k{flex-basis:100%}
-  .tel__note{max-width:none}
-}
+  }
 
 /* very short viewports (landscape phones): the readout goes to one line */
 @media (max-height:620px){
@@ -469,8 +462,7 @@ html.static .hud{position:static;padding:0 var(--gut) 40px;justify-content:flex-
   .tel__h{display:none}
   .tel__grid{display:flex;flex-wrap:wrap;column-gap:12px;row-gap:0;font-size:10px}
   .tel__grid dd{text-align:left;margin-right:4px}
-  .tel__note{font-size:9px;margin-top:3px;max-width:none}
-  .ctl{flex-direction:column;gap:5px}
+    .ctl{flex-direction:column;gap:5px}
   .btn{padding:6px 9px;font-size:10px}
 }
 
