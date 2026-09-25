@@ -3,6 +3,7 @@ import {
   Points, Scene, ShaderMaterial, Vector3, WebGLRenderer,
 } from 'three';
 import { buildVolumes, type Volume } from './clouds';
+import { MetalBackdrop } from './metal';
 
 const VERT = /* glsl */`
   precision mediump float;
@@ -167,6 +168,7 @@ export class CaptureScene {
   private time = 0;
   private look = { on: false, yaw: 0, pitch: 0, tYaw: 0, tPitch: 0, dist: 1 };
   private parallax = { x: 0, y: 0, tx: 0, ty: 0 };
+  private metal: MetalBackdrop;
   private snap = true;   // a segment change is a cut, not a flight
   private eye = new Vector3();
   private target = new Vector3();
@@ -183,6 +185,8 @@ export class CaptureScene {
     this.renderer.setPixelRatio(this.pr);
     this.renderer.setClearColor(new Color('#08090B'), 1);
 
+    this.metal = new MetalBackdrop(opts.mobile);
+    this.renderer.autoClear = false;
     this.camera = new PerspectiveCamera(52, 1, 0.5, 340);
     this.scene.fog = new Fog(new Color('#08090B').getHex(), 34, 128);
 
@@ -268,6 +272,7 @@ export class CaptureScene {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    this.metal.resize(w, h, this.pr);
   }
 
   /** the next frame places the camera outright, with no travel between views */
@@ -341,6 +346,8 @@ export class CaptureScene {
       this.meshes[k].visible = m.uniforms.uOpacity.value > 0.01;
     }
 
+    this.renderer.clear();
+    this.metal.render(this.renderer, this.time);
     this.renderer.render(this.scene, this.camera);
 
     if (import.meta.env.DEV && (window as any).__wantPx) {
@@ -373,6 +380,7 @@ export class CaptureScene {
 
   dispose() {
     this.meshes.forEach((m) => { m.geometry.dispose(); (m.material as ShaderMaterial).dispose(); });
+    this.metal.dispose();
     this.renderer.dispose();
   }
 }
