@@ -121,12 +121,19 @@ async function boot() {
   window.setTimeout(sweep, 1400);
   window.addEventListener('orientationchange', () => setTimeout(measure, 240));
 
-  const progressAt = (y: number) => {
-    if (y <= marks[0]) return 0;
-    for (let i = 0; i < marks.length - 1; i++) {
-      if (y < marks[i + 1]) return i + (y - marks[i]) / Math.max(1, marks[i + 1] - marks[i]);
+  /* which segment currently fills the viewport. The camera holds one settled
+     view per segment and cuts when a new one takes over, so nothing in the
+     scene is driven by scroll position. */
+  const activeIndex = () => {
+    const mid = window.innerHeight / 2;
+    let best = 0, bestD = Infinity;
+    for (let i = 0; i < anchorStages.length; i++) {
+      const r = anchorStages[i].getBoundingClientRect();
+      if (r.top <= mid && r.bottom >= mid) return i;
+      const d = Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid));
+      if (d < bestD) { bestD = d; best = i; }
     }
-    return marks.length - 1;
+    return best;
   };
 
   /* damped scroll: scene state never binds to raw scroll position */
@@ -231,7 +238,8 @@ async function boot() {
     prev = now;
     targetY = window.scrollY;
     introGate(targetY);
-    damped += (progressAt(targetY) - damped) * 0.08;   // the camera eases, the page does not
+    const a = activeIndex();
+    if (a !== damped) { damped = a; scene.cut(); }
     scene.update(damped, dt);
     if (import.meta.env.DEV) (window as any).__cap = { damped, targetY, marks, cam: scene.camera.position.toArray(), vols: scene.debugVolumes() };
   };

@@ -145,6 +145,7 @@ export class CaptureScene {
   private time = 0;
   private look = { on: false, yaw: 0, pitch: 0, tYaw: 0, tPitch: 0, dist: 1 };
   private parallax = { x: 0, y: 0, tx: 0, ty: 0 };
+  private snap = true;   // a segment change is a cut, not a flight
   private eye = new Vector3();
   private target = new Vector3();
   private aim = new Vector3();
@@ -239,6 +240,9 @@ export class CaptureScene {
     this.renderer.setSize(w, h, false);
   }
 
+  /** the next frame places the camera outright, with no travel between views */
+  cut() { this.snap = true; }
+
   setPointer(nx: number, ny: number) { this.parallax.tx = nx; this.parallax.ty = ny; }
 
   setFreeLook(on: boolean) {
@@ -290,7 +294,8 @@ export class CaptureScene {
       this.target.z + Math.cos(yaw) * rad * Math.cos(pitch),
     );
 
-    this.camera.position.lerp(this.eye, 0.16);
+    if (this.snap) { this.camera.position.copy(this.eye); this.snap = false; }
+    else { this.camera.position.lerp(this.eye, 0.16); }
     this.aim.set(this.target.x + this.frameShift, this.target.y, this.target.z);
     this.camera.lookAt(this.aim);
 
